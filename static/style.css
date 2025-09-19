@@ -1,0 +1,78 @@
+:root {
+	--gap: 12px;
+	--bg: #0b0f14;
+	--panel: #121812;
+	--text: #e8eef6;
+	--muted: #94a3b8;
+	--accent: #4cc9f0;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,  sans-serif; }
+
+.app {
+	height: 100vh;
+	display: grid;
+	grid-template-rows: 2fr 1fr;
+	gap: var(--gap);
+	padding: var(--gap);
+}
+
+.panel {
+	background: linear-gradient(180deg, #101620, #0e1420);
+	border: 1px solid #1b2432;
+	border-radius: 12px;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.25) inset, 0 10px 24px rgba(0,0,0,0.3);
+	overflow: hidden;
+	position: relative;
+}
+
+.top {
+	display: grid;
+	place-items: center;
+}
+
+/* 아랫층: 좌/우 2분할 */
+.bottom {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--gap);
+}
+.bottom .slot { display: grid; place-items: center; }
+
+/* 자리표시자(가이드용) */
+.placeholder {
+	width: 100%;
+	height: 100%;
+	display: grid;
+	place-items: center;
+	color: var(--muted);
+	border: 1px dashed #223047;
+	background: repeating-linear-gradient(
+		45deg, rgba(255,255,255,0.02) 0 10px, rgba(255,255,255,0.04) 10px 20px
+	);
+}
+
+.section-parent {
+  height: 100%;
+  aspect-ratio: 16 / 9; /* 원하는 비율 */
+  position: relative;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* 반응형: 폭이 좁으면 아래층을 세로로 스택 */
+@media (max-width: 900px) {
+	.app { grid-template-rows: 1.2fr 1fr; }
+	.bottom { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
+}
