@@ -1,11 +1,14 @@
 import Brain from "./Brain.js"
 import Camera from "./Camera.js";
 import Screen from "./Screen.js";
-import NeuronNetwork from "./NeuronNetwork.js";
-import BrainWs from "./BrainWs.js"
+import BrainControl from "./BrainControl.js"
+import Heart from "./Heart.js"
 
 const brainCanvas = document.querySelector("#brainCanvas");
 const brainEngine = new BABYLON.Engine(brainCanvas, true);
+
+const heartCanvas = document.querySelector("#heartCanvas");
+const heartContext = heartCanvas.getContext("2d");
 
 // true로 설정하면 그래픽이 더 부드럽게 렌더링됩니다.
 const createScene = async function () {
@@ -35,27 +38,26 @@ const createScene = async function () {
 	const brain = new Brain(brainScene);
 	brain.load();
 
+	// 심전도 모델
+	const heart = new Heart(heartCanvas, heartContext);
+
 	// 텍스트 박스
-	setTextBox(brainScene)
-
-	// 뉴런
-	const ws = new BrainWs();
-
-	return brainScene;
-}
-
-const setTextBox = async function (brainScene) {
 	const advancedTextureBrain = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("brainUI", true, brainScene);
 	const textBlock = new BABYLON.GUI.TextBlock();
-	textBlock.left = "40%";
+	textBlock.left = "30%";
 	textBlock.top = "30%";
 	textBlock.color = "white";
 	textBlock.fontSize = 15;
 	textBlock.text = "text to test"
 	advancedTextureBrain.addControl(textBlock);
+
+	// 뉴런
+	const brainControl = new BrainControl(brainScene, textBlock, heart);
+
+	return { brainScene };
 }
 
-createScene().then((brainScene) => {
+createScene().then(({ brainScene }) => {
 	brainEngine.runRenderLoop(() => {
 		brainScene.render();
 	});

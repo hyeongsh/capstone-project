@@ -25,7 +25,7 @@ class Neuron {
 		this.sphere.isVisible = true;
 		setTimeout(() => {
 			this.sphere.isVisible = false;
-		}, 300);
+		}, 500);
 	}
 }
 

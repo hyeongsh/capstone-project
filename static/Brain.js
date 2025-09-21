@@ -18,7 +18,7 @@ class Brain {
 		// });
 
 		this.glassMaterial = new BABYLON.PBRMaterial("glass", this.scene);
-		this.glassMaterial.alpha = 0.4;
+		this.glassMaterial.alpha = 0.6;
 		this.glassMaterial.metallic = 0.0;
 		this.glassMaterial.roughness = 0.05;
 		this.glassMaterial.indexOfRefraction = 1.5;

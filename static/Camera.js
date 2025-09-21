@@ -6,7 +6,7 @@ class Camera {
 			"Camera",
 			turn, // 좌우 각도
 			Math.PI / 2, // 상하 각도
-			5, // 거리
+			4, // 거리
 			position, // target
 			this.scene
 		);

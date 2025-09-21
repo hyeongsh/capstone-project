@@ -3,6 +3,21 @@ class Screen {
 		this.scene = scene;
 		this.screen = BABYLON.MeshBuilder.CreatePlane("screen", { width: 3, height: 2 }, this.scene);
 		this.screenBehind = BABYLON.MeshBuilder.CreatePlane("screenBehind", { width: 3, height: 2 }, this.scene);
+
+		// 웹소켓 설정
+		this.ws = new WebSocket("ws://localhost:8000/video-control");
+		this.ws.onopen = () => { console.log("Video WebSocket 연결됨"); }
+		this.ws.onmessage = (event) => { 
+			if (event.data == "play") {
+				this.play();
+			} else if (event.data == "pause") {
+				this.pause();
+			} else {
+				this.speedControl(parseFloat(event.data));
+			}
+		}
+		this.ws.onerror = (err) => { console.error("WebSocket 에러: ", err); }
+		this.ws.onclose = () => { console.log("WebSocket 연결종료"); }
 	}
 
 	load() {
@@ -30,6 +45,7 @@ class Screen {
 		this.screenBehind.position = new BABYLON.Vector3(-0.1, 0.7, -3);
 		this.screenBehind.material = matBehind;
 		matBehind.diffuseColor = new BABYLON.Color3(1, 1, 1); // 흰색
+		this.pause();
 	}
 
 	play() {
