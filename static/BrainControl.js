@@ -10,6 +10,9 @@ class BrainControl {
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
 		this.ws.onopen = () => { console.log("Neuron WebSocket 연결됨"); }
 		this.ws.onmessage = (event) => { 
+			if (this.currentSpikeInterval) {
+				this.currentSpikeInterval.stop();
+			}
 			this.spikeNeuron(event.data);
 		}
 		this.ws.onerror = (err) => { console.error("WebSocket 에러: ", err); }
@@ -28,13 +31,16 @@ class BrainControl {
 		}));
 	}
 
+	start() {
+		this.ws.send("start");
+	}
+
 	spikeNeuron(regionId) {
 		if (regionId === "SpinalCord") {
 			this.heart.pulseBig(true);
 		} else {
 			this.heart.pulseBig(false);
 		}
-		// this.currentSpikeInterval.stop();
 		if (regionId === "Temporal_lobe") {
 			this.spikeNeuron("Temporal_lobe_2");
 		}
@@ -78,7 +84,6 @@ class BrainControl {
 			}, 300);
 			this.currentSpikeInterval = {
 				stop: () => {
-					this.heart.pulseBig(false);
 					clearInterval(spike);
 					resolve();
 				}

@@ -10,6 +10,8 @@ const brainEngine = new BABYLON.Engine(brainCanvas, true);
 const heartCanvas = document.querySelector("#heartCanvas");
 const heartContext = heartCanvas.getContext("2d");
 
+let brainControl, brainScreen;
+
 // true로 설정하면 그래픽이 더 부드럽게 렌더링됩니다.
 const createScene = async function () {
 	const brainScene = new BABYLON.Scene(brainEngine);
@@ -54,10 +56,12 @@ const createScene = async function () {
 	// 뉴런
 	const brainControl = new BrainControl(brainScene, textBlock, heart);
 
-	return { brainScene };
+	return { brainScene, brainControl, brainScreen };
 }
 
-createScene().then(({ brainScene }) => {
+createScene().then(({ brainScene, brainControl: bc, brainScreen: bs }) => {
+	brainControl = bc;
+	brainScreen = bs;
 	brainEngine.runRenderLoop(() => {
 		brainScene.render();
 	});
@@ -66,3 +70,14 @@ createScene().then(({ brainScene }) => {
 window.addEventListener("resize", () => {
 	brainEngine.resize();
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+	const pulseBtn = document.querySelector("#pulseBtn");
+
+	pulseBtn.addEventListener("click", () => {
+		console.log("시작 버튼 눌림");
+		brainScreen.start();
+		brainControl.start();
+		pulseBtn.style.display = "none";
+	})
+})

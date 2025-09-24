@@ -34,12 +34,20 @@ async def neuron_endpoint(ws: WebSocket):
 	global neuron_ws
 	await ws.accept()
 	neuron_ws = ws
-	await ws_send("neuron", "SpinalCord")
-	# await ws_send("neuron", "Amygdala")
+
 	try:
 		while True:
 			data = await ws.receive_text()
-			await ws.send_text(f"Echo: {data}")
+			if data == "start":
+				await ws_send("neuron", "SpinalCord")
+				# 10초 후 메시지 보내는 태스크 실행
+				async def delayed_send():
+					await asyncio.sleep(10)
+					try:
+						await ws.send_text("Occipital")
+					except Exception as e:
+						print("지연 메시지 전송 실패:", e)
+				asyncio.create_task(delayed_send())
 	except Exception as e:
 		neuron_ws = None
 		print("웹소켓 연결 끊김: ", e)
@@ -50,15 +58,23 @@ async def video_endpoint(ws: WebSocket):
 	await ws.accept()
 	video_ws = ws
 
-	loop = asyncio.get_running_loop()
-	loop.run_in_executor(None, cv.play_video, "static/video.mp4", loop)
 	try:
 		while True:
 			data = await ws.receive_text()
-			await ws.send_text(f"Echo: {data}")
+			if data == "start":
+				loop = asyncio.get_running_loop()
+				loop.run_in_executor(None, cv.play_video, "static/video.mp4", loop)
 	except Exception as e:
 		video_ws = None
 		print("웹소켓 연결 끊김: ", e)
+
+# from db import SessionLocal
+# from crud import get_object_by_name
+# from models import Object
+
+# db = SessionLocal()
+# object = get_object_by_name(db, "fox")
+# print("name =", object.name)
 
 if __name__ == "__main__":
 	uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -71,6 +71,26 @@ canvas {
   left: 0;
 }
 
+#pulseBtn {
+	position: fixed; 
+	top: 50%; 
+	left: 50%; 
+	transform: translate(-50%, -50%); 
+	z-index: 1000;
+	padding: 1rem 2rem;
+	font-size: 1.2rem;
+	background: crimson;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+#pulseBtn:hover {
+	background: darkred;
+}
+
 /* 반응형: 폭이 좁으면 아래층을 세로로 스택 */
 @media (max-width: 900px) {
 	.app { grid-template-rows: 1.2fr 1fr; }

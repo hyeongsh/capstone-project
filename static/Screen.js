@@ -20,6 +20,10 @@ class Screen {
 		this.ws.onclose = () => { console.log("WebSocket 연결종료"); }
 	}
 
+	start() {
+		this.ws.send("start");
+	}
+
 	load() {
 		// 영상 텍스처 준비
 		this.videoElement = document.querySelector("#brainVideo");
