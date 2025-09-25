@@ -1,10 +1,11 @@
 import Neuron from "./Neuron.js"
 
 class BrainControl {
-	constructor(scene, textBlock, heart) {
+	constructor(scene, textBlock, heart, actionBlock) {
 		this.scene = scene;
 		this.textBlock = textBlock;
 		this.heart = heart;
+		this.actionBlock = actionBlock;
 		
 		// 웹소켓 설정
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
@@ -31,23 +32,25 @@ class BrainControl {
 		}));
 	}
 
-	start() {
-		this.ws.send("start");
-	}
-
-	spikeNeuron(regionId) {
-		if (regionId === "SpinalCord") {
-			this.heart.pulseBig(true);
-		} else {
-			this.heart.pulseBig(false);
+	spikeNeuron(action) {
+		let path = [];
+		if (action == "detect") {
+			path = this.detectPath;
+		} else if (action == "analysis") {
+			path = this.analysisPath;
 		}
-		if (regionId === "Temporal_lobe") {
-			this.spikeNeuron("Temporal_lobe_2");
-		}
-		const regionNeurons = this.neurons.filter(n => n.id === regionId);
-		const printText = this.areaText.find(([area]) => area === regionId)?.[1];
-		this.textBlock.text = printText;
-		return new Promise((resolve) => {
+		let currentIndex = 0;
+		const runPath = () => {
+			const regionId = path[currentIndex];
+			if (regionId == "SpinalCord") {
+				this.heart.pulseBig(true);
+			} else {
+				this.heart.pulseBig(false);
+			}
+			const regionNeurons = this.neurons.filter(n => n.id === regionId);
+			const printText = this.areaText.find(([area]) => area === regionId)?.[1];
+			this.textBlock.text = printText;
+			
 			const spike = setInterval(() => {
 				const index1 = Math.floor(Math.random() * 21);
 				const index2 = Math.floor(Math.random() * 21);
@@ -85,10 +88,20 @@ class BrainControl {
 			this.currentSpikeInterval = {
 				stop: () => {
 					clearInterval(spike);
-					resolve();
 				}
 			};
-		});
+			setTimeout(() => {
+				this.currentSpikeInterval.stop();
+				currentIndex++;
+				if (currentIndex < path.length) {
+					runPath();
+				} else {
+					this.currentSpikeInterval = null;
+					this.ws.send("ack-" + action);
+				}
+			}, 5000);
+		};
+		runPath();
 	}
 
 	initNeurons() {
@@ -137,6 +150,9 @@ class BrainControl {
 			}));
 			return [region, ...clones];
 		});
+
+		this.detectPath = ["Thalamus", "Amygdala", "Hypothalamus", "Medulla", "SpinalCord"];
+		this.analysisPath = ["Thalamus", "Occipital", "Parietal", "Hippocampus", "Prefrontal"];
 
 		this.areaText = [
 			["Thalamus", "Thalamus(시상)\n감각 정보 입력 및 처리"],

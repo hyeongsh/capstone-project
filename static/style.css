@@ -91,8 +91,31 @@ canvas {
 	background: darkred;
 }
 
+.text-area {
+  position: relative;
+  height: 100px;
+  overflow: hidden;
+}
+
+.scrolling-text {
+  position: absolute;
+  bottom: -100%;
+  width: 100%;
+  text-align: center;
+  animation: scrollUp 5s linear forwards;
+}
+
 /* 반응형: 폭이 좁으면 아래층을 세로로 스택 */
 @media (max-width: 900px) {
 	.app { grid-template-rows: 1.2fr 1fr; }
 	.bottom { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
+}
+
+@keyframes scrollUp {
+  from {
+    bottom: -100%;
+  }
+  to {
+    bottom: 100%;
+  }
 }

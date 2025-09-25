@@ -3,16 +3,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uvicorn
-from container import create_memory_manager
 from cv_manager import CVManager
 import asyncio
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-neuron_ws = None
-video_ws = None
 
 async def ws_send(ws: str, message: str):
 	if ws == "neuron":
@@ -22,8 +18,10 @@ async def ws_send(ws: str, message: str):
 		if video_ws is not None:
 			await video_ws.send_text(message)
 
-memory_manager = create_memory_manager()
-cv = CVManager(memory_manager, send_callback=ws_send)
+neuron_ws = None
+video_ws = None
+
+cv = CVManager(send=ws_send)
 
 @app.get("/")
 async def root():
@@ -38,16 +36,12 @@ async def neuron_endpoint(ws: WebSocket):
 	try:
 		while True:
 			data = await ws.receive_text()
-			if data == "start":
-				await ws_send("neuron", "SpinalCord")
-				# 10초 후 메시지 보내는 태스크 실행
-				async def delayed_send():
-					await asyncio.sleep(10)
-					try:
-						await ws.send_text("Occipital")
-					except Exception as e:
-						print("지연 메시지 전송 실패:", e)
-				asyncio.create_task(delayed_send())
+			if data == "ack-detect":
+				cv.complete_detect()
+			elif data == "ack-analysis":
+				cv.complete_analysis()
+			elif data == "ack-afterwords":
+				cv.complete_afterwords()
 	except Exception as e:
 		neuron_ws = None
 		print("웹소켓 연결 끊김: ", e)
@@ -67,14 +61,6 @@ async def video_endpoint(ws: WebSocket):
 	except Exception as e:
 		video_ws = None
 		print("웹소켓 연결 끊김: ", e)
-
-# from db import SessionLocal
-# from crud import get_object_by_name
-# from models import Object
-
-# db = SessionLocal()
-# object = get_object_by_name(db, "fox")
-# print("name =", object.name)
 
 if __name__ == "__main__":
 	uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

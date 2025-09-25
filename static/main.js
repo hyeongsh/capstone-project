@@ -54,7 +54,7 @@ const createScene = async function () {
 	advancedTextureBrain.addControl(textBlock);
 
 	// 뉴런
-	const brainControl = new BrainControl(brainScene, textBlock, heart);
+	const brainControl = new BrainControl(brainScene, textBlock, heart, null);
 
 	return { brainScene, brainControl, brainScreen };
 }
@@ -77,7 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	pulseBtn.addEventListener("click", () => {
 		console.log("시작 버튼 눌림");
 		brainScreen.start();
-		brainControl.start();
 		pulseBtn.style.display = "none";
 	})
 })
