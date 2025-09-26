@@ -5,6 +5,7 @@ class Heart {
 		this.context = context;
 		this.width = canvas.width;
 		this.height = canvas.height;
+		this.speed = 5;
 
 		this.baseline = this.height / 2;
 		this.step = 7;
@@ -51,7 +52,7 @@ class Heart {
 		this.context.strokeStyle = "red";
 		this.context.lineWidth = 2;
 		this.context.moveTo(this.points[0].x, this.points[0].y);
-		for (let i = 1; i <= this.pos; i++) {
+		for (let i = 1; i < this.points.length; i++) {
 			this.context.lineTo(this.points[i].x, this.points[i].y);
 		}
 		this.context.stroke();
@@ -61,20 +62,12 @@ class Heart {
 		this.context.fillStyle = "red";
 		this.context.fill();
 
-		if (this.pos + 10 < this.points.length) {
-			this.context.beginPath();
-			this.context.strokeStyle = "red";
-			this.context.lineWidth = 2;
-			this.context.moveTo(this.points[this.pos + 10].x, this.points[this.pos + 10].y);
-			for (let i = this.pos + 11; i < this.points.length; i++) {
-				this.context.lineTo(this.points[i].x, this.points[i].y);
-			}
-			this.context.stroke();
-		}
+		this.context.fillStyle = "black"; // 배경색
+		this.context.fillRect(this.points[this.pos].x + Math.PI, 0, this.width, this.height); // 캔버스 전체 덮기
 	}
 
 	animate() {
-		this.frameCount = (this.frameCount + 1) % 4;
+		this.frameCount = (this.frameCount + 1) % this.speed;
 		if (this.frameCount == 0) {
 			this.pos += 1;
 		}
@@ -102,6 +95,7 @@ class Heart {
 			-10, 40, -20, 0,      // QRS (Q 아래, R 위로, S 아래, baseline)
 			0, 15, 0              // T파
 		];
+		this.speed = (big) ? 3 : 4
 		this.points = [];
 		let t = 0;
 		let x = 0;
