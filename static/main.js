@@ -54,7 +54,7 @@ const createScene = async function () {
 	advancedTextureBrain.addControl(textBlock);
 
 	// 뉴런
-	const brainControl = new BrainControl(brainScene, textBlock, heart, null);
+	const brainControl = new BrainControl(brainScene, textBlock, heart);
 
 	return { brainScene, brainControl, brainScreen };
 }

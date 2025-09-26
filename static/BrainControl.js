@@ -1,11 +1,14 @@
 import Neuron from "./Neuron.js"
 
 class BrainControl {
-	constructor(scene, textBlock, heart, actionBlock) {
+	constructor(scene, textBlock, heart) {
 		this.scene = scene;
 		this.textBlock = textBlock;
 		this.heart = heart;
-		this.actionBlock = actionBlock;
+		this.actionImage = document.querySelector("#infoImage");
+		this.textOverlay = document.querySelector(".text-overlay");
+		this.infoTitle = document.querySelector("#infoTitle");
+		this.infoDescription = document.querySelector("#infoDescription");
 		
 		// 웹소켓 설정
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
@@ -51,6 +54,11 @@ class BrainControl {
 			const printText = this.areaText.find(([area]) => area === regionId)?.[1];
 			this.textBlock.text = printText;
 			
+			// brainAction 띄우기
+			if (action == "analysis") {
+				this.displayImage(currentIndex, "block");
+			}
+
 			const spike = setInterval(() => {
 				const index1 = Math.floor(Math.random() * 21);
 				const index2 = Math.floor(Math.random() * 21);
@@ -92,6 +100,9 @@ class BrainControl {
 			};
 			setTimeout(() => {
 				this.currentSpikeInterval.stop();
+				if (action == "analysis") {
+					this.displayImage(currentIndex, "none");
+				}
 				currentIndex++;
 				if (currentIndex < path.length) {
 					runPath();
@@ -102,6 +113,42 @@ class BrainControl {
 			}, 5000);
 		};
 		runPath();
+	}
+
+	displayImage(index, turn) {
+		this.actionImage.style.display = turn;
+		if (turn == "block") {
+			this.textOverlay.classList.add("show");
+		} else {
+			this.textOverlay.classList.remove("show");
+		}
+		switch (index) {
+			case 0:
+				this.actionImage.src = "static/images/png1.png";
+				this.infoTitle.textContent = "비트맵";
+				this.infoDescription.textContent = "설명입니다.";
+				break ;
+			case 1:
+				this.actionImage.src = "static/images/png2.png";
+				this.infoTitle.textContent = "노이즈 제거";
+				this.infoDescription.textContent = "설명입니다.";
+				break ;
+			case 2:
+				this.actionImage.src = "static/images/png3.png";
+				this.infoTitle.textContent = "흑백 변환";
+				this.infoDescription.textContent = "설명입니다.";
+				break ;
+			case 3:
+				this.actionImage.src = "static/images/png4.png";
+				this.infoTitle.textContent = "윤곽선 생성";
+				this.infoDescription.textContent = "설명입니다.";
+				break ;
+			case 4:
+				this.actionImage.src = "static/images/png5.png";
+				this.infoTitle.textContent = "강조";
+				this.infoDescription.textContent = "설명입니다.";
+				break ;
+		}
 	}
 
 	initNeurons() {
