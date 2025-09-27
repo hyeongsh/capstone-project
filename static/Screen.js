@@ -3,27 +3,15 @@ class Screen {
 		this.scene = scene;
 		this.screen = BABYLON.MeshBuilder.CreatePlane("screen", { width: 3, height: 2 }, this.scene);
 		this.screenBehind = BABYLON.MeshBuilder.CreatePlane("screenBehind", { width: 3, height: 2 }, this.scene);
-
-		// 웹소켓 설정
-		this.ws = new WebSocket("ws://localhost:8000/video-control");
-		this.ws.onopen = () => { console.log("Video WebSocket 연결됨"); }
-		this.ws.onmessage = (event) => { 
-			if (event.data == "play") {
-				this.play();
-			} else if (event.data == "pause") {
-				this.pause();
-			} else {
-				this.speedControl(parseFloat(event.data));
-			}
-		}
-		this.ws.onerror = (err) => { console.error("WebSocket 에러: ", err); }
-		this.ws.onclose = () => { console.log("WebSocket 연결종료"); }
+		this.stopTime = [10, 20, 30];
+		this.stopIndex = 0;
+		this.stop = true;
 	}
 
-	start() {
-		this.ws.send("start");
+	setControl(brainControl) {
+		this.brainControl = brainControl;
 	}
-
+	
 	load() {
 		// 영상 텍스처 준비
 		this.videoElement = document.querySelector("#brainVideo");
@@ -51,17 +39,50 @@ class Screen {
 		matBehind.diffuseColor = new BABYLON.Color3(1, 1, 1); // 흰색
 		this.pause();
 	}
-
+	
+	start() {
+		this.videoElement.play();
+		this.stop = false;
+		this.timeCheck();
+	}
+	
 	play() {
 		this.videoElement.play();
+		this.stop = false;
 	}
-
+	
 	pause() {
 		this.videoElement.pause();
+		this.stop = true;
 	}
 
 	speedControl(speed) {
 		this.videoElement.playbackRate = speed;
+	}
+
+	timeCheck() {
+		this.timeCheckInterval = setInterval(() => {
+			if (!this.stop) {
+				if (this.videoElement.currentTime >= this.stopTime[this.stopIndex]) {
+					this.pause();
+					switch (this.stopIndex) {
+						case 0:
+							this.brainControl.currentFrame = "detect_snake";
+							break ;
+						case 1:
+							this.brainControl.currentFrame = "approach_snake";
+							break ;
+						case 2:
+							this.brainControl.currentFrame = "tongue_snake";
+							break ;
+	
+					}
+					this.brainControl.spikeNeuron("detect")
+					this.stopIndex++;
+				}
+			}
+		})
+
 	}
 
 }

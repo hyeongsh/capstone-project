@@ -3,25 +3,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uvicorn
-from cv_manager import CVManager
+import cv
 import asyncio
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-async def ws_send(ws: str, message: str):
-	if ws == "neuron":
-		if neuron_ws is not None:
-			await neuron_ws.send_text(message)
-	elif ws == "video-control":
-		if video_ws is not None:
-			await video_ws.send_text(message)
+async def ws_send(message: str):
+	if neuron_ws is not None:
+		await neuron_ws.send_text(message)
 
 neuron_ws = None
-video_ws = None
-
-cv = CVManager(send=ws_send)
 
 @app.get("/")
 async def root():
@@ -36,30 +29,15 @@ async def neuron_endpoint(ws: WebSocket):
 	try:
 		while True:
 			data = await ws.receive_text()
-			if data == "ack-detect":
-				cv.complete_detect()
-			elif data == "ack-analysis":
-				cv.complete_analysis()
-			elif data == "ack-afterwords":
-				cv.complete_afterwords()
+			loop = asyncio.get_running_loop()
+			data_list = data.split('|')
+			if data_list[0] == "analysis":
+				loop.run_in_executor(None, cv.frame_detail, ws_send, loop, data_list[1])
+			elif data_list[0] == "afterwords":
+				result = await loop.run_in_executor(None, cv.send_afterwords, data_list[1])
+				await ws_send("afterwords")
 	except Exception as e:
 		neuron_ws = None
-		print("웹소켓 연결 끊김: ", e)
-
-@app.websocket("/video-control")
-async def video_endpoint(ws: WebSocket):
-	global video_ws
-	await ws.accept()
-	video_ws = ws
-
-	try:
-		while True:
-			data = await ws.receive_text()
-			if data == "start":
-				loop = asyncio.get_running_loop()
-				loop.run_in_executor(None, cv.play_video, "static/video.mp4", loop)
-	except Exception as e:
-		video_ws = None
 		print("웹소켓 연결 끊김: ", e)
 
 if __name__ == "__main__":

@@ -9,7 +9,8 @@ class BrainControl {
 		this.textOverlay = document.querySelector(".text-overlay");
 		this.infoTitle = document.querySelector("#infoTitle");
 		this.infoDescription = document.querySelector("#infoDescription");
-		
+		this.currentFrame = null;
+
 		// 웹소켓 설정
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
 		this.ws.onopen = () => { console.log("Neuron WebSocket 연결됨"); }
@@ -35,12 +36,21 @@ class BrainControl {
 		}));
 	}
 
+	setScreen(screen) {
+		this.screen = screen;
+	}
+
 	spikeNeuron(action) {
 		let path = [];
 		if (action == "detect") {
 			path = this.detectPath;
 		} else if (action == "analysis") {
 			path = this.analysisPath;
+		} else if (action == "afterwords") {
+			path = null;
+			// 다 끝났다 치고 종료
+			this.screen.play();
+			return 
 		}
 		let currentIndex = 0;
 		const runPath = () => {
@@ -108,9 +118,13 @@ class BrainControl {
 					runPath();
 				} else {
 					this.currentSpikeInterval = null;
-					this.ws.send("ack-" + action);
+					if (action == "detect") {
+						this.ws.send("analysis|" + this.currentFrame);
+					} else if (action == "analysis") {
+						this.ws.send("afterwords|" + this.currentFrame);
+					}
 				}
-			}, 5000);
+			}, 3000);
 		};
 		runPath();
 	}

@@ -31,18 +31,10 @@ const createScene = async function () {
 	// 카메라
 	const brainCamera = new Camera(brainScene, new BABYLON.Vector3(0, 0.5, -1.5), Math.PI / 4);
 	brainCamera.load();
-
-	// 영상 스크린
-	const brainScreen = new Screen(brainScene);
-	brainScreen.load();
 	
-	// 뇌 모델
-	const brain = new Brain(brainScene);
-	brain.load();
-
 	// 심전도 모델
 	const heart = new Heart(heartCanvas, heartContext);
-
+	
 	// 텍스트 박스
 	const advancedTextureBrain = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("brainUI", true, brainScene);
 	const textBlock = new BABYLON.GUI.TextBlock();
@@ -52,9 +44,20 @@ const createScene = async function () {
 	textBlock.fontSize = 15;
 	textBlock.text = "text to test"
 	advancedTextureBrain.addControl(textBlock);
-
+	
 	// 뉴런
 	const brainControl = new BrainControl(brainScene, textBlock, heart);
+	
+	// 뇌 모델
+	const brain = new Brain(brainScene);
+	brain.load();
+	
+	// 영상 스크린
+	const brainScreen = new Screen(brainScene);
+	brainScreen.load();
+
+	brainControl.setScreen(brainScreen);
+	brainScreen.setControl(brainControl);
 
 	return { brainScene, brainControl, brainScreen };
 }
