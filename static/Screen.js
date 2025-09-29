@@ -3,7 +3,8 @@ class Screen {
 		this.scene = scene;
 		this.screen = BABYLON.MeshBuilder.CreatePlane("screen", { width: 3, height: 2 }, this.scene);
 		this.screenBehind = BABYLON.MeshBuilder.CreatePlane("screenBehind", { width: 3, height: 2 }, this.scene);
-		this.stopTime = [10, 20, 30];
+		// this.stopTime = [71, 83, 107];
+		this.stopTime = [1, 2, 3];
 		this.stopIndex = 0;
 		this.stop = true;
 	}

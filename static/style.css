@@ -132,9 +132,51 @@ canvas {
 	transition: transform 0.3s ease;
 }
 
-.image-area:hover .text-overlay,
 .text-overlay.show {
 	transform: translateY(0);
+}
+
+.secret-message {
+	position: absolute;
+	left: 50%;
+	bottom: 20%;
+	transform: translate(-50%, 120%);
+	background: rgba(12, 18, 32, 0.9);
+	color: var(--text);
+	padding: 0.75rem 1.25rem;
+	border-radius: 12px;
+	box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+	opacity: 0;
+	pointer-events: none;
+	max-width: 85%;
+	text-align: center;
+	z-index: 2;
+	backdrop-filter: blur(4px);
+	transition: opacity 0.3s ease;
+	--secret-duration: 1s;
+}
+
+.secret-message.show {
+	animation: secret-slide var(--secret-duration) ease forwards;
+}
+
+@keyframes secret-slide {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, 120%);
+	}
+	10% {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+	80% {
+		opacity: 1;
+		transform: translate(-50%, -60%);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -120%);
+	}
 }
 
 .text-overlay h3 {
@@ -149,6 +191,7 @@ canvas {
 	line-height: 1.4;
 	opacity: 0.9;
 }
+
 
 /* 반응형: 폭이 좁으면 아래층을 세로로 스택 */
 @media (max-width: 900px) {

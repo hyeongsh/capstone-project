@@ -16,6 +16,12 @@ async def ws_send(message: str):
 
 neuron_ws = None
 
+@app.get("/static-nocache/{path:path}")
+async def nocache_static(path: str):
+    response = FileResponse(f"static/{path}")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 @app.get("/")
 async def root():
 	return FileResponse(Path("templates/index.html"))

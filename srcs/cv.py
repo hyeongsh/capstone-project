@@ -1,7 +1,7 @@
 import asyncio
+from pathlib import Path
 
 def frame_detail(send, loop, frame: str):
-	# 분석 이미지 생성 작업 진행
 
 	# 분석 이미지 생성 완료 신호 전송
 	asyncio.run_coroutine_threadsafe(send("analysis"), loop)

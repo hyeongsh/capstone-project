@@ -10,6 +10,8 @@ class BrainControl {
 		this.infoTitle = document.querySelector("#infoTitle");
 		this.infoDescription = document.querySelector("#infoDescription");
 		this.currentFrame = null;
+		this.afterwordsCallback = null;
+		this.afterwordsMessages = [];
 
 		// 웹소켓 설정
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
@@ -40,17 +42,33 @@ class BrainControl {
 		this.screen = screen;
 	}
 
+	setAfterwordsCallback(callback, messages = []) {
+		this.afterwordsCallback = callback;
+		if (Array.isArray(messages)) {
+			this.afterwordsMessages = messages;
+		} else if (typeof messages === "string") {
+			this.afterwordsMessages = [messages];
+		} else {
+			this.afterwordsMessages = [];
+		}
+	}
+
 	spikeNeuron(action) {
 		let path = [];
+		let areaText = [];
+		let timer;
 		if (action == "detect") {
 			path = this.detectPath;
+			areaText = this.detectText;
+			timer = 3000;
 		} else if (action == "analysis") {
 			path = this.analysisPath;
+			areaText = this.analysisText;
+			timer = 3000;
 		} else if (action == "afterwords") {
-			path = null;
-			// 다 끝났다 치고 종료
-			this.screen.play();
-			return 
+			path = this.afterwordsPath;
+			areaText = this.afterwordsText;
+			timer = 10000;
 		}
 		let currentIndex = 0;
 		const runPath = () => {
@@ -61,12 +79,20 @@ class BrainControl {
 				this.heart.pulseBig(false);
 			}
 			const regionNeurons = this.neurons.filter(n => n.id === regionId);
-			const printText = this.areaText.find(([area]) => area === regionId)?.[1];
+			const printText = areaText.find(([area]) => area === regionId)?.[1];
 			this.textBlock.text = printText;
 			
 			// brainAction 띄우기
 			if (action == "analysis") {
 				this.displayImage(currentIndex, "block");
+			} else if (action == "afterwords") {
+				const rawMessages = this.afterwordsMessages[currentIndex] ?? this.afterwordsMessages[0] ?? [];
+				const messagesForStep = Array.isArray(rawMessages) || typeof rawMessages === "string"
+					? rawMessages
+					: [];
+				if (typeof this.afterwordsCallback === "function") {
+					this.afterwordsCallback(messagesForStep);
+				}
 			}
 
 			const spike = setInterval(() => {
@@ -74,7 +100,7 @@ class BrainControl {
 				const index2 = Math.floor(Math.random() * 21);
 				const index3 = Math.floor(Math.random() * 21);
 				const index4 = Math.floor(Math.random() * 21);
-				const p1 = regionNeurons[index1].neuron.sphere.position
+				const p1 = regionNeurons[index1].neuron.sphere.position;
 				const p2 = regionNeurons[index2].neuron.sphere.position;
 				const p3 = regionNeurons[index3].neuron.sphere.position;
 				const p4 = regionNeurons[index4].neuron.sphere.position;
@@ -122,9 +148,11 @@ class BrainControl {
 						this.ws.send("analysis|" + this.currentFrame);
 					} else if (action == "analysis") {
 						this.ws.send("afterwords|" + this.currentFrame);
+					} else if (action == "afterwords") {
+						this.screen.play();
 					}
 				}
-			}, 3000);
+			}, timer);
 		};
 		runPath();
 	}
@@ -138,27 +166,27 @@ class BrainControl {
 		}
 		switch (index) {
 			case 0:
-				this.actionImage.src = "static/images/png1.png";
+				this.actionImage.src = "static-nocache/images/png1.png";
 				this.infoTitle.textContent = "비트맵";
 				this.infoDescription.textContent = "설명입니다.";
 				break ;
 			case 1:
-				this.actionImage.src = "static/images/png2.png";
+				this.actionImage.src = "static-nocache/images/png2.png";
 				this.infoTitle.textContent = "노이즈 제거";
 				this.infoDescription.textContent = "설명입니다.";
 				break ;
 			case 2:
-				this.actionImage.src = "static/images/png3.png";
+				this.actionImage.src = "static-nocache/images/png3.png";
 				this.infoTitle.textContent = "흑백 변환";
 				this.infoDescription.textContent = "설명입니다.";
 				break ;
 			case 3:
-				this.actionImage.src = "static/images/png4.png";
+				this.actionImage.src = "static-nocache/images/png4.png";
 				this.infoTitle.textContent = "윤곽선 생성";
 				this.infoDescription.textContent = "설명입니다.";
 				break ;
 			case 4:
-				this.actionImage.src = "static/images/png5.png";
+				this.actionImage.src = "static-nocache/images/png5.png";
 				this.infoTitle.textContent = "강조";
 				this.infoDescription.textContent = "설명입니다.";
 				break ;
@@ -169,33 +197,22 @@ class BrainControl {
 		this.gatewayRegions = [
 			// 시상: 감각 정보를 대뇌 피질로 전달하는 중계소
 			{ id: "Thalamus", position: [0, 0.65, -0.05], spread: { x: 0.1, y: 0.03, z: 0.03 } }, 
-			// 후두엽: 시각 정보 처리 (V1~V5 시각 피질 포함)
-			{ id: "Occipital", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
+			// 후두엽: 시각 정보 처리 (V1~V5 시각 피질 포함) -> 나눌 예정
+			{ id: "V1", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
+			{ id: "V2", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
+			{ id: "V4", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
 			// 해마: 기억 저장과 회상 (특히 장기 기억)
 			{ id: "Hippocampus", position: [0, 0.45, 0.1], spread: { x: 0.02, y: 0.02, z: 0.02 } }, 
 			// 편도체: 감정 처리, 특히 공포와 위협 감지
 			{ id: "Amygdala", position: [0, 0.38, -0.15], spread: { x: 0.02, y: 0.02, z: 0.02 } }, 
 			// 시상하부: 자율신경계, 내분비계 조절 (심박수, 체온 등)
 			{ id: "Hypothalamus", position: [0, 0.5, -0.1], spread: { x: 0.05, y: 0.05, z: 0.05 } }, 
-			// 연수: 심박수, 호흡 등 생명 유지 기능 조절
-			{ id: "Medulla", position: [0, 0.3, 0.1], spread: { x: 0.02, y: 0.04, z: 0.01 } }, 
 			// 척수: 근육으로 명령 전달
 			{ id: "SpinalCord", position: [0, 0.15, 0.16], spread: { x: 0.02, y: 0.04, z: 0.01 } }, 
-			// 게슈윈트: 언어 처리 및 시각 연결
-			{ id: "Geschwind", position: [0.4, 0.75, 0.35], spread: { x: 0.02, y: 0.04, z: 0.04 } }, 
-			// 두정엽: 시공간 감각, 위치 정보 처리 ("어디에 있는가")
-			{ id: "Parietal", position: [0, 0.9, 0.1], spread: { x: 0.2, y: 0.09, z: 0.09 } }, 
 			// 전전두엽: 이성적 판단, 계획, 실행 통제 (고차원적 사고)
 			{ id: "Prefrontal", position: [0, 0.75, -0.6], spread: { x: 0.08, y: 0.05, z: 0.05 } }, 
-			// 안와전두엽: 감정적 의사결정, 보상/처벌 판단
-			{ id: "Orbitofrontal", position: [0, 0.53, -0.45], spread: { x: 0.08, y: 0.03, z: 0.1 } }, 
-			// 측두엽: 소리 자극 분석
-			{ id: "Temporal_lobe", position: [0.4, 0.5, 0.1], spread: { x: 0.03, y: 0.1, z: 0.3 } },
-			{ id: "Temporal_lobe_2", position: [-0.4, 0.5, 0.1], spread: { x: 0.03, y: 0.1, z: 0.3 } },
-			// 브로카: 실제로 행동할 동작 계획
-			{ id: "Broca", position: [0.3, 0.65, -0.35], spread: {x: 0.05, y: 0.03, z: 0.03 } },
-			// 운동피질: 운동 명령 계획
-			{ id: "MotorCortex", position: [0, 0.9, -0.1], spread: {x: 0.2, y: 0.1, z: 0.05 } },
+			// IT: 패턴 인식 
+			{ id: "IT", position: [0.4, 0.5, 0.1], spread: { x: 0.03, y: 0.1, z: 0.3 } },
 		];
 
 		this.brainRegions = this.gatewayRegions.flatMap(region => {
@@ -212,24 +229,29 @@ class BrainControl {
 			return [region, ...clones];
 		});
 
-		this.detectPath = ["Thalamus", "Amygdala", "Hypothalamus", "Medulla", "SpinalCord"];
-		this.analysisPath = ["Thalamus", "Occipital", "Parietal", "Hippocampus", "Prefrontal"];
+		this.detectPath = ["Thalamus", "Amygdala", "Hypothalamus", "SpinalCord"];
+		this.analysisPath = ["V1", "V1", "V2", "V4", "IT"];
+		this.afterwordsPath = ["IT", "Amygdala", "Prefrontal"];
 
-		this.areaText = [
+		this.detectText = [
 			["Thalamus", "Thalamus(시상)\n감각 정보 입력 및 처리"],
-			["Occipital", "Occipital(후두엽)\n시각 정보 처리 (형태, 색, 움직임 등)"],
-			["Hippocampus", "Hippocampus(해마)\n기억 저장과 회상"],
-			["Amygdala", "Amygdala(편도체)\n감정 처리, 특히 위협 감지"],
-			["Hypothalamus", "Hypothalamus(시상하부)\n자율신경계 조절"],
-			["Medulla", "Medulla(연수)\n심박수, 호흡 조절"],
-			["Geschwind", "Geschwind(게슈윈드)\n언어 처리 및 시각 연결"],
-			["Prefrontal", "Prefrontal(전전두엽)\n논리적 사고, 계획, 실행 제어"],
-			["Orbitofrontal", "Orbitofrontal(안와전두엽)\n감정과 보상을 고려한 의사결정"],
-			["Parietal", "Parietal(두정엽)\n위치 인식과 시공간 통합 정보 처리"],
-			["SpinalCord", "SpinalCord(척수)\n근육으로 명령 전달"],
-			["Temporal_lobe", "Temporal(측두엽)\n청각 정보 분석 및 기억, 감정과의 연동"],
-			["Broca", "Broca(브로카영역)\n말을 구성하고 표현하기 위한 언어 운동 계획"],
-			["MotorCortex", "MotorCortex(운동피질)\n말하거나 반응하기 위한 실제 움직임 제어"],
+			["Amygdala", "Amygdala(편도체)\n위협 감지"],
+			["Hypothalamus", "Hypothalamus(시상하부)\n자율신경계 조절, 심장박동 조절"],
+			["SpinalCord", "SpinalCord(척수)\n근육(심장)으로 명령 전달"],
+		];
+
+		this.analysisText = [
+			["V1", "V1(1차 시각피질)\n비트맵 처리"],
+			["V1", "V1\n노이즈 제거"],
+			["V2", "V2\n명함 처리"],
+			["V4", "V4\n윤곽선 생성"],
+			["IT", "Inferotemporal cortex(하측두피질)\n패턴 통합 및 의미 부여"],
+		];
+
+		this.afterwordsText = [
+			["IT", "Inferotemporal cortex(하측두피질)\n시각 정보 종합, 객체 확정"],
+			["Amygdala", "Amygdala(편도체)\n위협/안전/친근 여부 평가 -> 행동 결정"],
+			["Prefrontal", "Prefrontal(전전두엽)\n전략적 계획 수립"],
 		]
 	}
 }
