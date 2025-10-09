@@ -12,13 +12,28 @@ class BrainControl {
 		this.currentFrame = null;
 		this.afterwordsCallback = null;
 		this.afterwordsMessages = [];
+		this.afterwordsLoader = null;
+		this.isHidingActionImage = false;
+		if (this.actionImage) {
+			this.actionImage.addEventListener("animationend", (event) => this.handleImageAnimationEnd(event));
+		}
 
 		// 웹소켓 설정
 		this.ws = new WebSocket("ws://localhost:8000/neuron");
 		this.ws.onopen = () => { console.log("Neuron WebSocket 연결됨"); }
-		this.ws.onmessage = (event) => { 
+		this.ws.onmessage = async (event) => { 
 			if (this.currentSpikeInterval) {
 				this.currentSpikeInterval.stop();
+			}
+			if (event.data === "afterwords" && typeof this.afterwordsLoader === "function") {
+				try {
+					const refreshed = await this.afterwordsLoader();
+					if (Array.isArray(refreshed) && refreshed.length) {
+						this.afterwordsMessages = refreshed;
+					}
+				} catch (error) {
+					console.error("afterwords 데이터 갱신 실패", error);
+				}
 			}
 			this.spikeNeuron(event.data);
 		}
@@ -53,6 +68,63 @@ class BrainControl {
 		}
 	}
 
+	setAfterwordsLoader(loader) {
+		if (typeof loader === "function") {
+			this.afterwordsLoader = loader;
+		}
+	}
+
+	spikeAlways() {
+		this.stopSpikeAlways();
+		const regionNeurons = this.neurons.filter(n => n.id === "Thalamus");
+		const spike = setInterval(() => {
+				const index1 = Math.floor(Math.random() * 21);
+				const index2 = Math.floor(Math.random() * 21);
+				const index3 = Math.floor(Math.random() * 21);
+				const index4 = Math.floor(Math.random() * 21);
+				const p1 = regionNeurons[index1].neuron.sphere.position;
+				const p2 = regionNeurons[index2].neuron.sphere.position;
+				const p3 = regionNeurons[index3].neuron.sphere.position;
+				const p4 = regionNeurons[index4].neuron.sphere.position;
+				const paths = [
+					[p1, p2],
+					[p2, p3],
+					[p3, p4],
+					[p4, p1],
+					[p1, p3],
+					[p2, p4]
+				];
+				paths.forEach((path, idx) => {
+					const edgeTube = BABYLON.MeshBuilder.CreateTube(`spikeTube${idx}`, { 
+						path: path,
+						radius: 0.003,
+						updatable: false
+					}, this.scene);
+					edgeTube.material = this.tubeMat;
+					this.glowLayer.addIncludedOnlyMesh(edgeTube);
+					setTimeout(() => {
+						edgeTube.dispose();
+					}, 500);
+				})
+				regionNeurons[index1].neuron.spikeNeuron();
+				regionNeurons[index2].neuron.spikeNeuron();
+				regionNeurons[index3].neuron.spikeNeuron();
+				regionNeurons[index4].neuron.spikeNeuron();
+			}, 300);
+		this.currentSpikeInterval = {
+			stop: () => {
+				clearInterval(spike);
+			}
+		};
+	}
+
+	stopSpikeAlways() {
+		if (this.currentSpikeInterval) {
+			this.currentSpikeInterval.stop();
+			this.currentSpikeInterval = null;
+		}
+	}
+	
 	spikeNeuron(action) {
 		let path = [];
 		let areaText = [];
@@ -71,6 +143,7 @@ class BrainControl {
 			timer = 10000;
 		}
 		let currentIndex = 0;
+		this.stopSpikeAlways();
 		const runPath = () => {
 			const regionId = path[currentIndex];
 			if (regionId == "SpinalCord") {
@@ -80,7 +153,7 @@ class BrainControl {
 			}
 			const regionNeurons = this.neurons.filter(n => n.id === regionId);
 			const printText = areaText.find(([area]) => area === regionId)?.[1];
-			this.textBlock.text = printText;
+			// this.textBlock.text = printText;
 			
 			// brainAction 띄우기
 			if (action == "analysis") {
@@ -150,6 +223,7 @@ class BrainControl {
 						this.ws.send("afterwords|" + this.currentFrame);
 					} else if (action == "afterwords") {
 						this.screen.play();
+						this.spikeAlways();
 					}
 				}
 			}, timer);
@@ -158,38 +232,47 @@ class BrainControl {
 	}
 
 	displayImage(index, turn) {
-		this.actionImage.style.display = turn;
-		if (turn == "block") {
+		const frames = [
+			{ src: "static-nocache/images/heatmap.png", title: "히트맵", desc: "뱀의 주요 관심 영역을 강조" },
+			{ src: "static-nocache/images/denoise.png", title: "노이즈 제거", desc: "잡음을 줄여 뱀의 비늘 패턴과 형태를 더 선명하게 표현" },
+			{ src: "static-nocache/images/gray.png", title: "흑백 변환", desc: "색상 제거 후 형태/윤곽을 집중적으로 관찰" },
+			{ src: "static-nocache/images/edges.png", title: "윤곽선 생성", desc: "뱀과 주변 환경의 경계를 구분" },
+			{ src: "static-nocache/images/outline.png", title: "강조", desc: "뱀위 실루엣과 특징적인 형태를 강조" }
+		];
+		const frameInfo = frames[index] ?? frames[0];
+		this.actionImage.src = frameInfo.src;
+		this.infoTitle.textContent = frameInfo.title;
+		this.infoDescription.textContent = frameInfo.desc;
+
+		if (turn === "block") {
+			this.isHidingActionImage = false;
+			this.actionImage.style.display = "block";
+			this.actionImage.classList.add("image-visible");
+			this.actionImage.classList.remove("slide-exit");
+			void this.actionImage.offsetWidth; // restart animation
+			this.actionImage.classList.add("slide-enter");
 			this.textOverlay.classList.add("show");
 		} else {
 			this.textOverlay.classList.remove("show");
+			this.isHidingActionImage = true;
+			this.actionImage.classList.remove("slide-enter");
+			if (!this.actionImage.classList.contains("slide-exit")) {
+				this.actionImage.classList.add("slide-exit");
+			}
 		}
-		switch (index) {
-			case 0:
-				this.actionImage.src = "static-nocache/images/png1.png";
-				this.infoTitle.textContent = "비트맵";
-				this.infoDescription.textContent = "설명입니다.";
-				break ;
-			case 1:
-				this.actionImage.src = "static-nocache/images/png2.png";
-				this.infoTitle.textContent = "노이즈 제거";
-				this.infoDescription.textContent = "설명입니다.";
-				break ;
-			case 2:
-				this.actionImage.src = "static-nocache/images/png3.png";
-				this.infoTitle.textContent = "흑백 변환";
-				this.infoDescription.textContent = "설명입니다.";
-				break ;
-			case 3:
-				this.actionImage.src = "static-nocache/images/png4.png";
-				this.infoTitle.textContent = "윤곽선 생성";
-				this.infoDescription.textContent = "설명입니다.";
-				break ;
-			case 4:
-				this.actionImage.src = "static-nocache/images/png5.png";
-				this.infoTitle.textContent = "강조";
-				this.infoDescription.textContent = "설명입니다.";
-				break ;
+	}
+
+	handleImageAnimationEnd(event) {
+		if (!this.actionImage) return;
+		if (event.animationName === "image-slide-in") {
+			this.actionImage.classList.remove("slide-enter");
+			return;
+		}
+		if (event.animationName === "image-slide-out" && this.isHidingActionImage) {
+			this.actionImage.style.display = "none";
+			this.actionImage.classList.remove("image-visible");
+			this.actionImage.classList.remove("slide-exit");
+			this.isHidingActionImage = false;
 		}
 	}
 
@@ -198,13 +281,13 @@ class BrainControl {
 			// 시상: 감각 정보를 대뇌 피질로 전달하는 중계소
 			{ id: "Thalamus", position: [0, 0.65, -0.05], spread: { x: 0.1, y: 0.03, z: 0.03 } }, 
 			// 후두엽: 시각 정보 처리 (V1~V5 시각 피질 포함) -> 나눌 예정
-			{ id: "V1", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
-			{ id: "V2", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
-			{ id: "V4", position: [0, 0.5, 0.5], spread: { x: 0.2, y: 0.09, z: 0.09 } } , 
+			{ id: "V1", position: [0, 0.45, 0.55], spread: { x: 0.06, y: 0.06, z: 0.06 } } , 
+			{ id: "V2", position: [0, 0.5, 0.5], spread: { x: 0.09, y: 0.15, z: 0.1 } } , 
+			{ id: "V4", position: [0, 0.7, 0.5], spread: { x: 0.2, y: 0.07, z: 0.07 } } , 
 			// 해마: 기억 저장과 회상 (특히 장기 기억)
-			{ id: "Hippocampus", position: [0, 0.45, 0.1], spread: { x: 0.02, y: 0.02, z: 0.02 } }, 
+			{ id: "Hippocampus", position: [0, 0.45, 0.1], spread: { x: 0.04, y: 0.04, z: 0.04 } }, 
 			// 편도체: 감정 처리, 특히 공포와 위협 감지
-			{ id: "Amygdala", position: [0, 0.38, -0.15], spread: { x: 0.02, y: 0.02, z: 0.02 } }, 
+			{ id: "Amygdala", position: [0, 0.38, -0.15], spread: { x: 0.04, y: 0.04, z: 0.04 } }, 
 			// 시상하부: 자율신경계, 내분비계 조절 (심박수, 체온 등)
 			{ id: "Hypothalamus", position: [0, 0.5, -0.1], spread: { x: 0.05, y: 0.05, z: 0.05 } }, 
 			// 척수: 근육으로 명령 전달
@@ -212,7 +295,7 @@ class BrainControl {
 			// 전전두엽: 이성적 판단, 계획, 실행 통제 (고차원적 사고)
 			{ id: "Prefrontal", position: [0, 0.75, -0.6], spread: { x: 0.08, y: 0.05, z: 0.05 } }, 
 			// IT: 패턴 인식 
-			{ id: "IT", position: [0.4, 0.5, 0.1], spread: { x: 0.03, y: 0.1, z: 0.3 } },
+			{ id: "IT", position: [0.4, 0.4, 0.3], spread: { x: 0.03, y: 0.05, z: 0.3 } },
 		];
 
 		this.brainRegions = this.gatewayRegions.flatMap(region => {

@@ -1,7 +1,16 @@
 # CRUD 함수 모음
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from models import Object, LabelAlias, ActionPolicy, Episode
+from models import (
+	ActionPolicy,
+	Episode,
+	LabelAlias,
+	ModelOutput,
+	Object,
+	EpisodicMemory,
+	SemanticMemory,
+)
 
 def create_object(db: Session, 
 				  name: str, 
@@ -73,7 +82,7 @@ def list_action_policy(db: Session, skip: int = 0, limit: int = 100):
 	return db.query(ActionPolicy).offset(skip).limit(limit).all()
 
 def delete_action_policy(db: Session, policy_id: int):
-	policy = get_action_policy_by_id(policy_id)
+	policy = get_action_policy_by_id(db, policy_id)
 	if policy:
 		db.delete(policy)
 		db.commit()
@@ -93,8 +102,35 @@ def list_episodes(db: Session, skip: int = 0, limit: int = 100):
 	return db.query(Episode).offset(skip).limit(limit).all()
 
 def delete_episode(db: Session, episode_id: int):
-	episode = get_episode_by_id(episode_id)
+	episode = get_episode_by_id(db, episode_id)
 	if episode:
 		db.delete(episode)
 		db.commit()
 	return episode
+
+def insert_output(db: Session, animal: str, predicted_behavior: str, action_plan: str):
+	output = ModelOutput(
+		animal = animal,
+		predicted_behavior = predicted_behavior,
+		action_plan = action_plan,
+	)
+	db.add(output)
+	db.commit()
+	db.refresh(output)
+	return output
+
+def get_episodic(db: Session, animal: str):
+	return (
+		db.query(EpisodicMemory)
+		.filter(func.lower(EpisodicMemory.animal) == animal.lower())
+		.all()
+	)
+
+def get_semantic(db: Session, animal: str):
+	return (
+		db.query(SemanticMemory)
+		.filter(func.lower(SemanticMemory.animal) == animal.lower())
+		.all()
+	)
+
+# 추가적인 CRUD 함수들을 여기에 작성

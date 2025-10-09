@@ -12,14 +12,16 @@
 	</head>
 	<body>
 		<main class="app">
-			<section class="panel top" id="stage">
-				<canvas class="grid-item" id="brainCanvas" style="width: 100%; height: 100%;"></canvas>
-			</section>
-			
-			<section class="bottom">
+			<div class="screen-timer" id="screenTimer" aria-live="polite">
+				<span class="screen-timer__label">SCREEN TIME</span>
+				<span class="screen-timer__time" id="screenTime">00:00</span>
+				<span class="screen-timer__status" id="screenStatus">PAUSED</span>
+			</div>
+			<section class="level level-one">
+				<div class="panel slot level-one-left" aria-hidden="true"></div>
 				<div class="panel slot" id="bottom-left">
 					<div class="image-area">
-						<img id="infoImage" src="static/images/png1.png" alt="info" style="display:none;" />
+						<img id="infoImage" src="static/images/denoise.png" alt="info" style="display:none;" />
 						<div class="secret-message" id="secretMessage" aria-hidden="true">
 							<p id="secretText">숨겨진 메시지가 올라옵니다.</p>
 						</div>
@@ -29,15 +31,21 @@
 						</div>
 					</div>
 				</div>
-				
-				<div class="panel slot" id="bottom-right">
-					<canvas class="grid-item" id="heartCanvas" style="width: 100%; height: 100%;"></canvas>
+			</section>
+
+			<section class="panel top level level-two" id="stage">
+				<canvas class="grid-item" id="brainCanvas" style="width: 100%; height: 100%;"></canvas>
+			</section>
+
+			<section class="panel slot level level-three" id="bottom-right">
+				<div class="heart-wrapper">
+					<canvas class="grid-item" id="heartCanvas"></canvas>
 				</div>
 			</section>
 			<button id="pulseBtn">시뮬레이션 시작</button>
 
 		</main>
 		<script src="static/main.js" type="module"></script>
-		<video id="brainVideo" src="static/video2.mp4" autoplay loop muted playsinline style="display:none"></video>
+		<video id="brainVideo" src="static/video.mp4" autoplay loop muted playsinline style="display:none"></video>
 	</body>
 </html>

@@ -5,7 +5,7 @@ class Heart {
 		this.context = context;
 		this.width = canvas.width;
 		this.height = canvas.height;
-		this.speed = 5;
+		this.speed = 6;
 
 		this.baseline = this.height / 2;
 		this.step = 7;
@@ -49,8 +49,8 @@ class Heart {
 	    this.context.fillRect(0, 0, this.width, this.height); // 캔버스 전체 덮기
 		
 		this.context.beginPath();
+		this.context.lineWidth = 1;
 		this.context.strokeStyle = "red";
-		this.context.lineWidth = 2;
 		this.context.moveTo(this.points[0].x, this.points[0].y);
 		for (let i = 1; i < this.points.length; i++) {
 			this.context.lineTo(this.points[i].x, this.points[i].y);
@@ -87,7 +87,7 @@ class Heart {
 		const newPattern = (big) ? 
 		[
 			0, 12, 0,              // P파 (더 크게)
-			-20, 70, -40, 0,       // QRS (더 크게)
+			-40, 80, -60, 0,       // QRS (더 크게)
 			0, 30, 0               // T파 (더 크게)
 		] : 
 		[
@@ -95,7 +95,7 @@ class Heart {
 			-10, 40, -20, 0,      // QRS (Q 아래, R 위로, S 아래, baseline)
 			0, 15, 0              // T파
 		];
-		this.speed = (big) ? 3 : 4
+		this.speed = (big) ? 3 : 6;
 		this.points = [];
 		let t = 0;
 		let x = 0;

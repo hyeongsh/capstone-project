@@ -5,10 +5,59 @@ from pathlib import Path
 import uvicorn
 import cv
 import asyncio
+import json
+from typing import Any, Dict
+from cognition import cognition
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+def _parse_afterwords_payload(result: str) -> Dict[str, Any]:
+	if not result:
+		return {}
+	text = result.strip()
+	if text.startswith("```") and text.endswith("```"):
+		text = text.strip("`").strip()
+	if text.startswith("python") or text.startswith("json"):
+		text = text.split("\n", 1)[-1]
+	try:
+		return json.loads(text)
+	except json.JSONDecodeError:
+		try:
+			return json.loads(text.replace("'", '"'))
+		except json.JSONDecodeError:
+			lines = text.splitlines()
+			pairs: Dict[str, str] = {}
+			for line in lines:
+				if ":" not in line:
+					continue
+				key_raw, value_raw = line.split(":", 1)
+				key = key_raw.strip().lower()
+				value = value_raw.strip()
+				if not key:
+					continue
+				pairs[key] = value
+			mapping = {
+				"color": "Color",
+				"animal": "Animal",
+				"shape": "Shape",
+				"state": "State",
+				"distance": "Distance",
+				"direction of movement": "Direction of Movement",
+				"speed": "Speed",
+			}
+			sample: Dict[str, Any] = {}
+			for key, value in pairs.items():
+				target_key = mapping.get(key)
+				if not target_key:
+					continue
+				if key in {"color", "shape"}:
+					items = [item.strip().lower() for item in value.split(",") if item.strip()]
+					sample[target_key] = items
+				else:
+					sample[target_key] = value.strip().lower()
+			return sample
 
 async def ws_send(message: str):
 	if neuron_ws is not None:
@@ -40,7 +89,9 @@ async def neuron_endpoint(ws: WebSocket):
 			if data_list[0] == "analysis":
 				loop.run_in_executor(None, cv.frame_detail, ws_send, loop, data_list[1])
 			elif data_list[0] == "afterwords":
-				result = await loop.run_in_executor(None, cv.send_afterwords, data_list[1])
+				result = await loop.run_in_executor(None, cv.afterward, data_list[1])
+				payload = _parse_afterwords_payload(result)
+				await loop.run_in_executor(None, cognition, payload, "static/data/afterward.txt")
 				await ws_send("afterwords")
 	except Exception as e:
 		neuron_ws = None

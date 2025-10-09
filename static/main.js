@@ -14,6 +14,44 @@ let brainControl, brainScreen;
 
 const defaultSecretMessage = "숨겨진 메시지가 올라옵니다.";
 let secretMessageTimers = [];
+const SECRET_OWNER_TIMELINE = "timeline";
+const SECRET_OWNER_AFTERWORDS = "afterwords";
+let secretMessageOwner = null;
+let activeTimelineKey = null;
+
+const secretMessageTimeline = [
+	{ start: 121, end: 123, message: "꿈 준비중.." },
+	{ start: 124, end: 126, message: "꿈 준비중..." },
+	{ start: 126, end: 127, message: "시각기억 호출" },
+	{ start: 127, end: 128, message: "시각기억 호출(뱀)" },
+	{ start: 128, end: 129, message: "시각기억 호출(뱀, 돼지코)" },
+	{ start: 129, end: 130, message: "시각기억 호출(뱀, 돼지코, 여우)" },
+	{ start: 130, end: 131, message: "시각기억 호출(뱀, 돼지코, 여우, 도시)" },
+	{ start: 131, end: 132, message: "시각기억 호출(뱀, 돼지코, 여우, 도시, 용)" },
+	{ start: 132, end: 134, message: "꿈 초기장면 생성" },
+	{ start: 134, end: 136, message: "오늘 무서운 독사를 봤어" },
+	{ start: 139, end: 140, message: "어제 다큐에서 본 여우 귀엽더라" },
+	{ start: 142, end: 144, message: "영화 속에 나온 드래곤 좀 살벌하던데" },
+	{ start: 146, end: 148, message: "돼지코뱀? 돼지 코라도 달렸나?" },
+	{ start: 150, end: 152, message: "언제까지 아침마다 이 도시를 봐야 할까" },
+	{ start: 152, end: 154, message: "괴물 좀 무섭게 생겼다" },
+	{ start: 154, end: 156, message: "독도 있을 것 같아" },
+	{ start: 156, end: 158, message: "움직이기만 해도 건물이 무너질 거 같은데" },
+	{ start: 158, end: 160, message: "도망쳐도 소용 없지 않을까" },
+	{ start: 160, end: 163, message: "거 봐, 저렇게 독을 쏠 거 같았어" },
+	{ start: 164, end: 165, message: "건물까지 부수면 정말 위험하겠다" },
+	{ start: 166, end: 167, message: "그러면 출근도 안 하려나?" },
+	{ start: 168, end: 170, message: "나가면 죽을 것 같아. 화가 많이 났어" },
+	{ start: 171, end: 174, message: "포효하는 것만으로 건물이 무너지는 거 아냐?" },
+	{ start: 175, end: 178, message: "브레스도 마구잡이로 쏠 거 같아" },
+	{ start: 179, end: 182, message: "이러면 누군가 막으러 와야 하는데" },
+	{ start: 183, end: 186, message: "잘 모르겠지만 헬기가 올 거 같아" },
+	{ start: 187, end: 190, message: "와서 분명 공격을 할 거야. 폭격을 조심해야 해" },
+	{ start: 191, end: 194, message: "시간을 끌면 더 올지도 몰라. 겁을 주고 도망칠까" },
+	{ start: 195, end: 198, message: "내가 헬기가 되면 더 빠르게 도망칠 수 있어" },
+	{ start: 199, end: 202, message: "나 헬기 운전할 줄 몰라!!" },
+	{ start: 203, end: 205, message: "터진다!" },
+];
 
 const clearSecretMessageTimers = () => {
 	secretMessageTimers.forEach(clearTimeout);
@@ -47,27 +85,108 @@ const normalizeSecretLines = (messages) => {
 	return [defaultSecretMessage];
 };
 
+const applySecretMessageWidth = (secretMessage, lines) => {
+	if (!secretMessage || !Array.isArray(lines) || !lines.length) return;
+	const maxLength = lines.reduce((len, line) => Math.max(len, line.length), 0);
+	const widthScale = Math.min(1, maxLength / 16);
+	const bubbleWidth = Math.min(500, 280 + widthScale * 280);
+	secretMessage.style.setProperty("--secret-width", `${bubbleWidth}px`);
+};
+
+const getSecretElements = () => {
+	const secretMessage = document.querySelector("#secretMessage");
+	const secretText = document.querySelector("#secretText");
+	if (!secretMessage || !secretText) return null;
+	return { secretMessage, secretText };
+};
+
+const hideSecretMessageElement = () => {
+	const elements = getSecretElements();
+	if (!elements) return;
+	const { secretMessage } = elements;
+	secretMessage.classList.remove("show");
+	secretMessage.style.removeProperty("--secret-duration");
+};
+
+function hideTimelineMessage() {
+	if (secretMessageOwner === SECRET_OWNER_TIMELINE) {
+		hideSecretMessageElement();
+		secretMessageOwner = null;
+	}
+	activeTimelineKey = null;
+}
+
+function showTimelineMessage(lines) {
+	const elements = getSecretElements();
+	if (!elements) return;
+	const { secretMessage, secretText } = elements;
+	const safeLines = Array.isArray(lines) && lines.length ? lines : [defaultSecretMessage];
+	applySecretMessageWidth(secretMessage, safeLines);
+	clearSecretMessageTimers();
+	secretMessage.classList.remove("show");
+	secretMessage.style.removeProperty("--secret-duration");
+	secretText.textContent = safeLines.join("\n");
+	void secretMessage.offsetWidth;
+	secretMessage.classList.add("show");
+	secretMessageOwner = SECRET_OWNER_TIMELINE;
+	activeTimelineKey = JSON.stringify(safeLines);
+}
+
+function setupSecretTimeline(videoElement, timeline) {
+	if (!videoElement || !Array.isArray(timeline) || !timeline.length) return;
+	const sortedTimeline = [...timeline].sort((a, b) => a.start - b.start);
+
+	const evaluateTimeline = () => {
+		const currentTime = videoElement.currentTime ?? 0;
+		let foundIndex = -1;
+		for (let i = 0; i < sortedTimeline.length; i++) {
+			const entry = sortedTimeline[i];
+			if (currentTime >= entry.start && currentTime < entry.end) {
+				foundIndex = i;
+				break;
+			}
+		}
+
+		if (foundIndex === -1) {
+			if (secretMessageOwner === SECRET_OWNER_TIMELINE) {
+				hideTimelineMessage();
+			}
+			return;
+		}
+
+		const entryLines = normalizeSecretLines(sortedTimeline[foundIndex].message);
+		const key = JSON.stringify(entryLines);
+
+		if (secretMessageOwner && secretMessageOwner !== SECRET_OWNER_TIMELINE) {
+			return;
+		}
+
+		if (secretMessageOwner !== SECRET_OWNER_TIMELINE || activeTimelineKey !== key) {
+			showTimelineMessage(entryLines);
+		}
+	};
+
+	videoElement.addEventListener("timeupdate", evaluateTimeline);
+	videoElement.addEventListener("seeked", evaluateTimeline);
+	videoElement.addEventListener("play", evaluateTimeline);
+	evaluateTimeline();
+}
+
 const parseAfterwordsGroups = (rawText) => {
 	const groups = [];
 	let current = [];
 	const lines = rawText.split(/\r?\n/);
 	lines.forEach(line => {
 		const trimmed = line.trim();
-		if (!trimmed) {
-			if (current.length) {
-				groups.push([...current]);
-				current = [];
-			}
-			return;
-		}
+		if (!trimmed) return;
 		if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
 			if (current.length) {
 				groups.push([...current]);
 			}
 			current = [trimmed];
-		} else {
-			current.push(trimmed);
+			return;
 		}
+		current.push(trimmed);
 	});
 	if (current.length) {
 		groups.push([...current]);
@@ -77,9 +196,9 @@ const parseAfterwordsGroups = (rawText) => {
 
 const loadAfterwordsMessages = async () => {
 	try {
-		const response = await fetch("static/data/afterwords.txt", { cache: "no-cache" });
+		const response = await fetch("static-nocache/data/afterward.txt", { cache: "no-cache" });
 		if (!response.ok) {
-			throw new Error(`Failed to load afterwords.txt: ${response.status}`);
+			throw new Error(`Failed to load afterward.txt: ${response.status}`);
 		}
 		const text = await response.text();
 		return parseAfterwordsGroups(text);
@@ -90,12 +209,22 @@ const loadAfterwordsMessages = async () => {
 };
 
 const triggerSecretMessage = (messages = defaultSecretMessage) => {
-	const secretMessage = document.querySelector("#secretMessage");
-	const secretText = document.querySelector("#secretText");
-	if (!secretMessage || !secretText) return;
+	const elements = getSecretElements();
+	if (!elements) return;
+	const { secretMessage, secretText } = elements;
+
+	if (secretMessageOwner === SECRET_OWNER_TIMELINE) {
+		hideTimelineMessage();
+	}
 
 	const lines = normalizeSecretLines(messages);
-	const perLineDuration = 1500; // 1초
+	applySecretMessageWidth(secretMessage, lines);
+
+	secretMessageOwner = SECRET_OWNER_AFTERWORDS;
+	activeTimelineKey = null;
+
+	const totalDuration = 10000;
+	const perLineDuration = Math.max(1200, Math.floor((totalDuration - 1000) / Math.max(lines.length, 1)));
 
 	clearSecretMessageTimers();
 	secretMessage.classList.remove("show");
@@ -103,8 +232,8 @@ const triggerSecretMessage = (messages = defaultSecretMessage) => {
 
 	const playLine = (lineIndex) => {
 		if (lineIndex >= lines.length) {
-			secretMessage.classList.remove("show");
-			secretMessage.style.removeProperty("--secret-duration");
+			hideSecretMessageElement();
+			secretMessageOwner = null;
 			return;
 		}
 
@@ -177,8 +306,14 @@ Promise.all([createScene(), loadAfterwordsMessages()])
 	.then(([{ brainScene, brainControl: bc, brainScreen: bs }, afterwordsGroups]) => {
 		brainControl = bc;
 		brainScreen = bs;
+		if (brainScreen && typeof brainScreen.getVideoElement === "function") {
+			setupSecretTimeline(brainScreen.getVideoElement(), secretMessageTimeline);
+		}
 		if (typeof brainControl.setAfterwordsCallback === "function") {
 			brainControl.setAfterwordsCallback(triggerSecretMessage, afterwordsGroups);
+		}
+		if (typeof brainControl.setAfterwordsLoader === "function") {
+			brainControl.setAfterwordsLoader(loadAfterwordsMessages);
 		}
 		brainEngine.runRenderLoop(() => {
 			brainScene.render();
@@ -202,6 +337,9 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 		brainScreen.start();
+		if (typeof brainControl.spikeAlways === "function") {
+			brainControl.spikeAlways();
+		}
 		pulseBtn.style.display = "none";
 	})
 })
